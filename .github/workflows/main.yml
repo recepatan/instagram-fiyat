@@ -3,7 +3,6 @@ name: Instagram Altın Botu
 on:
   schedule:
     # Her gün Türkiye saatiyle 10:15 ve 18:15'te çalışır.
-    # UTC karşılıkları: 07:15 ve 15:15
     - cron: '15 7,15 * * *'
   workflow_dispatch: # Manuel çalıştırma butonu
 
@@ -27,7 +26,6 @@ jobs:
 
       - name: Botu Çalıştır
         env:
-          # GitHub Secrets kısmına eklediğin isimlerle aynı olmalı
-          INSTA_USER: ${{ secrets.INSTA_USER }}
-          INSTA_PASS: ${{ secrets.INSTA_PASS }}
+          # ÖNEMLİ: Secrets kısmına INSTA_SESSIONID eklemiş olmalısın
+          INSTA_SESSIONID: ${{ secrets.INSTA_SESSIONID }}
         run: python bot.py
