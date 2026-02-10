@@ -17,7 +17,7 @@ jobs:
       - name: Python 3.10 Kur
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10' # Hatanın çözümü için sürüm yükseltildi
+          python-version: '3.10'
 
       - name: Kütüphaneleri Yükle
         run: |
@@ -26,6 +26,6 @@ jobs:
 
       - name: Botu Çalıştır
         env:
-          INSTA_USER: ${{ secrets.INSTA_USER }}
-          INSTA_PASS: ${{ secrets.INSTA_PASS }}
+          # Instagram şifresi yerine tarayıcıdan aldığın session anahtarını kullanıyoruz
+          INSTA_SESSIONID: ${{ secrets.INSTA_SESSIONID }}
         run: python bot.py
