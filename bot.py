@@ -74,21 +74,21 @@ def create_post_image(fiyatlar):
     return img_name
 
 def upload_to_instagram(img_path):
-    # DİKKAT: GitHub Secrets içindeki INSTA_SESSIONID değerini kullanır
     SESSION_ID = os.getenv('INSTA_SESSIONID')
-    
+    if not SESSION_ID:
+        print("HATA: INSTA_SESSIONID bulunamadı!")
+        return
+
     cl = Client()
-    # ÖNEMLİ: Tarayıcı kimliğini (User-Agent) sabitliyoruz
+    # Tarayıcı kimliğini sabitliyoruz
     cl.set_user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
 
     try:
-        print("Oturum açılıyor (SessionID)...")
+        print("Oturum anahtarı ile giriş yapılıyor...")
         cl.login_by_sessionid(SESSION_ID)
         
-        # Giriş kontrolü
-        print(f"Giriş Başarılı!")
-        
-        caption = "Bingöl Güncel Altın Fiyatları 📊 #bingol #altin #bingolder"
+        print("Giriş başarılı! Görsel yükleniyor...")
+        caption = "Bingöl Güncel Altın Fiyatları 📊\n\n#bingol #altin #bingolder #ekonomi"
         cl.photo_upload(img_path, caption)
         print("Paylaşım TAMAMLANDI!")
         
