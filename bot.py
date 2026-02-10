@@ -7,26 +7,36 @@ def upload_to_instagram(img_path):
 
     cl = Client()
     
-    # KRİTİK AYAR: Botu Chrome tarayıcısı gibi tanıtıyoruz
-    cl.set_user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
+    # 1. Tarayıcı (User-Agent) bilgilerini Chrome olarak ayarla
+    cl.set_user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
     try:
-        print("Session ID ile giriş yapılıyor...")
+        print("Session ID ile giriş deneniyor...")
         
-        # Giriş yapmadan önce cookieleri manuel ayarla (Hata ihtimalini düşürür)
-        cl.set_settings({"cookies": {"sessionid": SESSION_ID}})
+        # 2. SessionID'yi doğrudan çerez olarak ekle (data hatasını önlemek için)
+        cl.set_settings({
+            "cookies": [
+                {
+                    "name": "sessionid",
+                    "value": SESSION_ID,
+                    "domain": ".instagram.com",
+                    "path": "/",
+                }
+            ]
+        })
         
-        # Şifresiz giriş
+        # 3. Giriş yap
         cl.login_by_sessionid(SESSION_ID)
         
-        # Giriş başarılı mı kontrol et
-        user_info = cl.account_info().dict()
-        print(f"Giriş Başarılı: {user_info['username']}")
+        # 4. Girişi doğrula
+        me = cl.account_info().dict()
+        print(f"Giriş Başarılı: {me['username']}")
         
-        caption = "Bingöl Güncel Altın Fiyatları 📊 #bingol #altin #kuyumcu"
+        # 5. Paylaşım
+        caption = "Bingöl Güncel Altın Fiyatları 📊\n\n#bingol #altin #kuyumcu #bingolder"
         cl.photo_upload(img_path, caption)
         print("Paylaşım başarıyla yapıldı!")
         
     except Exception as e:
         print(f"Instagram hatası: {e}")
-        print("Tavsiye: Tarayıcıdan yeni bir sessionid alıp Secret'ı güncellemeyi deneyin.")
+        print("İPUCU: Hata 'data' ise yeni bir sessionid alıp Secret'ı güncelleyin.")
