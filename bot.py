@@ -1,106 +1,74 @@
 import requests
 import os
-import pytz
-import time
+import json
 from datetime import datetime
+import pytz
 from PIL import Image, ImageDraw, ImageFont
-from instagrapi import Client
 
+# 1. Veri Çekme Fonksiyonu
 def get_gold_data():
     url = "https://ayarlar.bingolder.com/"
+    response = requests.get(url)
+    data = response.json()
+    rows = data.get('values', [])
+    
+    # Sadece göstermek istediğimiz ürünler
+    mapping = {
+        "has": "Has Altın",
+        "ceyrek": "Çeyrek Altın",
+        "yarım": "Yarım Altın",
+        "ata": "Ata Lira",
+        "tel": "22 Ayar Bilezik"
+    }
+    
+    results = []
+    # Kur bilgisini al (hesaplama için)
+    kur = float(str(rows[1][1]).replace(',', '.'))
+    
+    for row in rows[1:]:
+        key = row[0].strip().lower()
+        if key in mapping:
+            satis = float(str(row[2]).replace(',', '.'))
+            # Has/Kur hariç diğerlerini kurla çarpıp 5'e yuvarla
+            fiyat = int(round((satis * kur) / 5.0) * 5) if key != "kur" else int(satis)
+            results.append(f"{mapping[key]}: {fiyat:,} TL")
+    
+    return results
+
+# 2. Görsel Oluşturma (Instagram için Kare Resim)
+def create_image(prices):
+    img = Image.new('RGB', (1080, 1080), color='#1a1a1a') # Koyu arka plan
+    draw = ImageDraw.Draw(img)
+    
+    # Not: GitHub Actions'ta standart font kullanacağız
     try:
-        response = requests.get(url, timeout=15)
-        data = response.json()
-        rows = data.get('values', [])
-        if not rows: return None
-        fiyatlar = {}
-        for row in rows[1:]:
-            if len(row) >= 3:
-                key = row[0].strip().lower()
-                try:
-                    fiyatlar[key] = {
-                        'alis': float(str(row[1]).replace(',', '.')), 
-                        'satis': float(str(row[2]).replace(',', '.'))
-                    }
-                except: continue
-        return fiyatlar
-    except Exception as e:
-        print(f"Veri çekme hatası: {e}")
-        return None
-
-def yuvarla(sayi):
-    return int(round(sayi / 5.0) * 5)
-
-def create_post_image(fiyatlar):
-    width, height = 1080, 1350
-    image = Image.new('RGB', (width, height), color='#0f172a') 
-    draw = ImageDraw.Draw(image)
-    istanbul_tz = pytz.timezone('Europe/Istanbul')
-    tarih_str = datetime.now(istanbul_tz).strftime("%d.%m.%Y - %H:%M")
-
-    try:
-        header_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 50)
-        price_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 40)
+        font_title = ImageFont.load_default() # Daha iyi görünüm için .ttf dosyası eklenebilir
     except:
-        header_font = ImageFont.load_default()
-        price_font = ImageFont.load_default()
+        font_title = ImageFont.load_default()
 
-    draw.rectangle([0, 0, width, 200], fill='#1e293b')
-    draw.text((60, 50), "BİNGÖL GÜNCEL ALTIN FİYATLARI", fill="#ffb300", font=header_font)
-    draw.text((60, 130), f"Son Güncelleme: {tarih_str}", fill="#94a3b8", font=price_font)
-
-    kur_satis = fiyatlar['kur']['satis']
-    isimlendirme = [
-        ("has", "Has Altın (24 Ayar)"), ("tel", "22 Ayar Bilezik"),
-        ("ata", "Ata Lira"), ("ziynet", "Ziynet Altın"),
-        ("yarım", "Yarım Altın"), ("ceyrek", "Çeyrek Altın"),
-        ("gram²⁴", "24 Ayar Gram"), ("ons", "ONS (Dolar)"),
-        ("ondort", "14 Ayar Altın")
-    ]
-
-    y = 280
-    for anahtar, gorunur_ad in isimlendirme:
-        if anahtar in fiyatlar:
-            val = fiyatlar[anahtar]
-            f_satis = int(val['satis']) if anahtar == "ons" else yuvarla(kur_satis * val['satis'])
-            draw.text((80, y), gorunur_ad, fill="white", font=price_font)
-            draw.text((750, y), f"{f_satis:,} TL".replace(",", "."), fill="#ffb300", font=price_font)
-            draw.line((80, y + 70, 1000, y + 70), fill="#334155", width=2)
-            y += 105
-
-    draw.text((80, height - 100), "Veriler: bingolder.com", fill="#475569", font=price_font)
-    img_name = "insta_post.jpg"
-    image.save(img_name, quality=95)
-    return img_name
-
-def upload_to_instagram(img_path):
-    SESSION_ID = os.getenv('INSTA_SESSIONID')
-    if not SESSION_ID:
-        print("HATA: INSTA_SESSIONID bulunamadı!")
-        return
-
-    cl = Client()
-    # Tarayıcı kimliğini sabitliyoruz
-    cl.set_user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
-
-    try:
-        print("Oturum anahtarı ile giriş yapılıyor...")
-        cl.login_by_sessionid(SESSION_ID)
+    draw.text((100, 100), "BİNGÖL KUYUMCULAR DERNEĞİ", fill='#D4AF37')
+    draw.text((100, 160), datetime.now(pytz.timezone('Europe/Istanbul')).strftime("%d.%m.%Y %H:%M"), fill='white')
+    
+    y_pos = 300
+    for p in prices:
+        draw.text((100, y_pos), p, fill='#D4AF37')
+        y_pos += 80
         
-        print("Giriş başarılı! Görsel yükleniyor...")
-        caption = "Bingöl Güncel Altın Fiyatları 📊\n\n#bingol #altin #bingolder #ekonomi"
-        cl.photo_upload(img_path, caption)
-        print("Paylaşım TAMAMLANDI!")
-        
-    except Exception as e:
-        print(f"Instagram hatası: {e}")
+    img.save('gunluk_altin.jpg')
+
+# 3. Instagram API Paylaşımı
+def post_to_instagram():
+    # Bu değişkenleri GitHub Secrets'a ekleyeceksiniz
+    ACCESS_TOKEN = os.getenv('INSTAGRAM_TOKEN')
+    IG_USER_ID = os.getenv('INSTAGRAM_USER_ID')
+    IMAGE_URL = "RESIM_URL_BURAYA_GELECEK" # Önemli Not: Aşağıya bakın
+
+    # Not: Instagram API görselin internette bir URL'de olmasını ister. 
+    # Alternatif: Imgur API veya GitHub Pages üzerinden geçici URL üretilebilir.
+    # Şimdilik mantığı kuruyoruz:
+    print("Görsel oluşturuldu, API gönderimi tetikleniyor...")
 
 if __name__ == "__main__":
-    print("Bot başlatıldı...")
-    data = get_gold_data()
-    if data:
-        print("Veriler çekildi, görsel hazırlanıyor...")
-        post_file = create_post_image(data)
-        upload_to_instagram(post_file)
-    else:
-        print("Veri çekilemedi.")
+    prices = get_gold_data()
+    create_image(prices)
+    # post_to_instagram() # API ayarlarınız bitince aktif edilecek
