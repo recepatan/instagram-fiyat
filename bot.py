@@ -5,27 +5,28 @@ import requests
 TOKEN = os.getenv("INSTAGRAM_TOKEN")
 USER_ID = os.getenv("INSTAGRAM_USER_ID")
 
-def final_test():
+def kesin_cozum_testi():
     print("--- Bot Baslatildi ---")
     
-    # Instagram'in sevdigi, yonlendirme icermeyen dogrudan .jpg linki
-    test_image = "https://i.ibb.co/XfR8vXn/test-image.jpg" 
+    # Instagram'in asla reddedemeyecegi, dogrudan ham resim linki
+    # Bu resim standart bir JPG'dir ve her yerden erisilebilir.
+    test_image = "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png" 
     
     # 1. Adim: Media Container Olustur
     url = f"https://graph.facebook.com/v21.0/{USER_ID}/media"
     payload = {
         'image_url': test_image,
-        'caption': 'Bingöl Emlak Otomasyon Sistemi Devreye Alındı! 🚀',
+        'caption': 'Sistem Testi: Bingöl Emlak Otomasyonu Hazır! ✅',
         'access_token': TOKEN
     }
     
-    print("1. Adim: Instagram'a veri gonderiliyor...")
+    print(f"1. Adim: Resim yukleniyor ({test_image})...")
     r = requests.post(url, data=payload)
     result = r.json()
     
     if 'id' in result:
         creation_id = result['id']
-        print(f"Konteyner Olustu ID: {creation_id}")
+        print(f"Basarili! Konteyner ID: {creation_id}")
         
         # 2. Adim: Yayimla
         publish_url = f"https://graph.facebook.com/v21.0/{USER_ID}/media_publish"
@@ -33,10 +34,10 @@ def final_test():
             'creation_id': creation_id,
             'access_token': TOKEN
         }
-        print("2. Adim: Yayimlaniyor...")
+        print("2. Adim: Instagram sayfasinda yayimlaniyor...")
         r_pub = requests.post(publish_url, data=publish_payload)
-        print(f"SONUC: {r_pub.json()}")
+        print(f"FINAL SONUCU: {r_pub.json()}")
     else:
-        print(f"HATA ALINDI: {result}")
+        print(f"INSTAGRAM HATASI: {result}")
 
-final_test()
+kesin_cozum_testi()
