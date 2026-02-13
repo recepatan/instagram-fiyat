@@ -35,7 +35,7 @@ def instagram_paylas(mesaj):
     TOKEN = os.getenv("INSTAGRAM_TOKEN")
     USER_ID = os.getenv("INSTAGRAM_USER_ID")
     # Sabit şık bir altın resmi veya Wikipedia resmi
-    RESIM_URL = "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+    RESIM_URL = "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiNmhusZFfmgifFe2RqTOpxBA-nzIwWzMAGLRncBIfAR8WxVVZpd_dkyklfsQbtXPNZeR1nnZSQ6iK6RDcRmYSkWi4yMpVedtqsQgBes2zYz2CDWUOm3xmZv8lSRlgJec_Mvq_Xl5_Q9jXpwpVKgCZK6bkszL10kku_z8Ebi9JHrPWcGEZfgrzjBbXSmP8r/w410-h286-p-k-no-nu-rw/view-3d-golden-bee-Photoroom.png"
     
     try:
         url = f"https://graph.facebook.com/v21.0/{USER_ID}/media"
