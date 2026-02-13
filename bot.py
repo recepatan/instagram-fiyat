@@ -1,30 +1,29 @@
 import os
 import requests
 
-# GitHub Secrets'tan gelen bilgiler
+# GitHub Secrets
 TOKEN = os.getenv("INSTAGRAM_TOKEN")
 USER_ID = os.getenv("INSTAGRAM_USER_ID")
 
-def test_run():
+def karesel_test_gonder():
     print("--- Bot Baslatildi ---")
-    print(f"Hedef ID: {USER_ID}")
     
-    # ImgBB kismini atlayip direkt bir test resmi gonderelim (Google logosu gibi)
-    test_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Google_2015_logo.svg/1200px-Google_2015_logo.svg.png"
+    # Instagram'in kesin kabul edecegi KARE (1:1) bir test resmi
+    # Bu resim Instagram standartlarina uygundur.
+    test_image = "https://picsum.photos/1080/1080" 
     
     # 1. Adim: Media Container Olustur
     url = f"https://graph.facebook.com/v21.0/{USER_ID}/media"
     payload = {
         'image_url': test_image,
-        'caption': 'Bingöl Altın Fiyatları Bot Testi 🚀',
+        'caption': 'Bingöl için ilk otomatik paylaşım! 🚀 #bingol #altinfiyatlari',
         'access_token': TOKEN
     }
     
-    print("1. Adim: Instagram'a resim gonderiliyor...")
+    print("1. Adim: Kare resim gonderiliyor...")
     r = requests.post(url, data=payload)
     result = r.json()
-    print(f"Gelen Cevap: {result}")
-
+    
     if 'id' in result:
         creation_id = result['id']
         # 2. Adim: Yayimla
@@ -33,10 +32,10 @@ def test_run():
             'creation_id': creation_id,
             'access_token': TOKEN
         }
-        print("2. Adim: Resim yayimlaniyor...")
+        print("2. Adim: Yayimlaniyor...")
         r_pub = requests.post(publish_url, data=publish_payload)
-        print(f"Yayin Sonucu: {r_pub.json()}")
+        print(f"TEBRIKLER! Yayin Sonucu: {r_pub.json()}")
     else:
-        print("HATA: Resim yuklenemedi. Token veya ID hatali olabilir.")
+        print(f"HATA DETAYI: {result}")
 
-test_run()
+karesel_test_gonder()
