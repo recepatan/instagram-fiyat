@@ -1,19 +1,38 @@
+name: Altın Fiyatları Botu
+
+# Botun ne zaman çalışacağını belirler
+on:
+  schedule:
+    # Her gün Türkiye saati ile sabah 09:00 ile akşam 19:00 arası her saat başı çalışır
+    # (GitHub UTC kullandığı için 3 saat geri ayarlanmıştır: 06:00-16:00 UTC)
+    - cron: '0 6-16 * * *'
+  workflow_dispatch: # İstediğiniz zaman manuel olarak başlatmak için düğme ekler
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Repository
+      # 1. Kodları GitHub sunucusuna çek
+      - name: Repo Kontrol
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      # 2. Python Ortamını Kur
+      - name: Python Kurulumu
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
-      - name: Install Dependencies
+      # 3. Gerekli Kütüphaneleri Yükle (Hata aldığınız kısım burasıydı)
+      - name: Kütüphaneleri Yukle
         run: |
           python -m pip install --upgrade pip
           pip install requests pytz google-api-python-client google-auth-oauthlib google-auth-httplib2
 
-      - name: Run Bot
+      # 4. Botu Çalıştır ve Secrets Verilerini Tanıt
+      - name: Botu Calistir
         env:
+          # GitHub Settings -> Secrets and variables -> Actions kısmına eklediğiniz isimlerle aynı olmalı
           BLOGGER_TOKEN: ${{ secrets.BLOGGER_TOKEN }}
           BLOGGER_ID: ${{ secrets.BLOGGER_ID }}
           INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
