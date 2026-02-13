@@ -1,11 +1,7 @@
 import requests
 import os
-import json
 import pytz
-import sys
 from datetime import datetime
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
 
 # --- YARDIMCI FONKSİYONLAR ---
 def yuvarla(sayi):
@@ -38,12 +34,9 @@ def instagram_metni_olustur(fiyatlar, isimlendirme, baslik, kur_alis, kur_satis)
 def instagram_paylas(mesaj):
     TOKEN = os.getenv("INSTAGRAM_TOKEN")
     USER_ID = os.getenv("INSTAGRAM_USER_ID")
+    # Sabit şık bir altın resmi veya Wikipedia resmi
     RESIM_URL = "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
     
-    if not TOKEN or not USER_ID:
-        print("⚠️ Instagram bilgileri eksik, paylaşım yapılmadı.")
-        return
-
     try:
         url = f"https://graph.facebook.com/v21.0/{USER_ID}/media"
         payload = {'image_url': RESIM_URL, 'caption': mesaj, 'access_token': TOKEN}
@@ -54,58 +47,23 @@ def instagram_paylas(mesaj):
             creation_id = res['id']
             publish_url = f"https://graph.facebook.com/v21.0/{USER_ID}/media_publish"
             publish_payload = {'creation_id': creation_id, 'access_token': TOKEN}
-            requests.post(publish_url, data=publish_payload)
-            print("✅ Instagram paylaşımı başarılı!")
+            r_pub = requests.post(publish_url, data=publish_payload)
+            print(f"✅ Instagram Paylaşıldı: {r_pub.json()}")
         else:
             print(f"❌ Instagram Hatası: {res}")
     except Exception as e:
-        print(f"⚠️ Instagram fonksiyon hatası: {e}")
+        print(f"⚠️ Instagram hatası: {e}")
 
 # --- ANA AKIŞ ---
 def run_bot():
     try:
-        # 1. Yetkilendirme Kontrolü
-        blogger_token_raw = os.getenv('BLOGGER_TOKEN')
-        if not blogger_token_raw:
-            print("❌ HATA: BLOGGER_TOKEN bulunamadı!")
-            return
-
-        try:
-            token_data = json.loads(blogger_token_raw)
-            creds = Credentials.from_authorized_user_info(token_data)
-            service = build('blogger', 'v3', credentials=creds)
-        except Exception as e:
-            print(f"❌ HATA: BLOGGER_TOKEN JSON formatı bozuk veya geçersiz! Detay: {e}")
-            return
-
-        blog_id = os.getenv('BLOGGER_ID')
-        
-        # 2. Zaman Ayarları
-        istanbul_tz = pytz.timezone('Europe/Istanbul')
-        simdi = datetime.now(istanbul_tz)
-        aylar = {1: "Ocak", 2: "Şubat", 3: "Mart", 4: "Nisan", 5: "Mayıs", 6: "Haziran",
-                 7: "Temmuz", 8: "Ağustos", 9: "Eylül", 10: "Ekim", 11: "Kasım", 12: "Aralık"}
-        
-        gercek_baslik = f"{simdi.strftime('%d')} {aylar[simdi.month]} {simdi.strftime('%Y')} Altın Fiyatları"
-        saat_str, saat_id = simdi.strftime("%H:%M"), simdi.strftime("%H%M")
-
-        # 3. Veri Çekme ve Hata Ayıklama
+        # 1. Veri Çekme
         url = "https://ayarlar.bingolder.com/"
-        response = requests.get(url)
-        if response.status_code != 200:
-            print(f"❌ HATA: Fiyat sitesine ulaşılamıyor (Kod: {response.status_code})")
-            return
-
-        try:
-            data = response.json()
-        except:
-            print("❌ HATA: Siteden dönen veri JSON formatında değil!")
-            print(f"Gelen ham veri: {response.text[:100]}")
-            return
-
+        data = requests.get(url).json()
         rows = data.get('values', [])
+        
         if not rows:
-            print("⚠️ Veri listesi boş.")
+            print("⚠️ Veri çekilemedi.")
             return
 
         fiyatlar = {}
@@ -119,14 +77,10 @@ def run_bot():
                     }
                 except: continue
 
-        if 'kur' not in fiyatlar:
-            print("❌ HATA: Veriler arasında 'kur' bilgisi bulunamadı.")
-            return
-
         kur_alis = fiyatlar['kur']['alis']
         kur_satis = fiyatlar['kur']['satis']
 
-        # 4. Ürün Listesi
+        # 2. Ürün Listesi ve Başlık
         isimlendirme = [
             ("kur", "KUR"), ("has", "Çekme Altın (0,995)"), ("tel", "Burma Bilezik"),
             ("iscilikli", "İşçilikli Ürün"), ("ondort", "14 Ayar Altın"), 
@@ -134,50 +88,16 @@ def run_bot():
             ("yarım", "Yarım Altın"), ("ceyrek", "Çeyrek Altın"),
             ("gram²⁴", "Gram Altın (0,995)"), ("ons", "ONS (USD)")
         ]
-
-        # 5. HTML Tablo Oluşturma
-        yeni_tablo_html = f"""<div id="tab-{saat_id}" class="altin-tab-icerik" style="display:none;">
-            <table style="width:100%; border-collapse: collapse; border: 1px solid #D4AF37; font-family: Arial;">
-                <thead><tr style="background-color: #D4AF37; color: white;"><th style="padding:10px;">Ürün</th><th style="padding:10px;">Alış</th><th style="padding:10px;">Satış</th></tr></thead>
-                <tbody>"""
         
-        for anahtar, gorunur_ad in isimlendirme:
-            if anahtar in fiyatlar:
-                deger = fiyatlar[anahtar]
-                f_alis = int(deger['alis']) if anahtar in ["kur", "ons"] else yuvarla(kur_alis * deger['alis'])
-                f_satis = int(deger['satis']) if anahtar in ["kur", "ons"] else yuvarla(kur_satis * deger['satis'])
-                yeni_tablo_html += f"<tr><td style='padding:8px; border-bottom:1px solid #eee;'><b>{gorunur_ad}</b></td><td>{f_alis:,}</td><td style='color:#b8860b; font-weight:bold;'>{f_satis:,}</td></tr>"
-        
-        yeni_tablo_html += "</tbody></table></div>"
+        simdi = datetime.now(pytz.timezone('Europe/Istanbul'))
+        baslik = f"{simdi.strftime('%d.%m.%Y')} Altın Fiyatları"
 
-        # 6. Blogger İşlemleri
-        query = f'title:"{gercek_baslik}"'
-        search_results = service.posts().search(blogId=blog_id, q=query).execute()
-        existing_post = next((item for item in search_results.get('items', []) if item['title'] == gercek_baslik), None)
-
-        arsiv_notu = '<p id="arsiv-notu" style="margin-top:15px; padding:10px; background:#f9f9f9; border-left:4px solid #D4AF37; font-size:14px; font-family:Arial, sans-serif; color:#555;">⚠️ Veriler arşiv niteliğindedir.</p>'
-
-        if existing_post:
-            content = existing_post['content']
-            yeni_option = f'<option value="tab-{saat_id}">{saat_str}</option>'
-            content = content.replace('</select>', yeni_option + '</select>')
-            updated_content = content.replace('<p id="arsiv-notu"', yeni_tablo_html + '<p id="arsiv-notu"') if 'id="arsiv-notu"' in content else content + yeni_tablo_html
-            service.posts().update(blogId=blog_id, postId=existing_post['id'], body={'title': gercek_baslik, 'content': updated_content, 'labels': ['Altın Fiyatları']}).execute()
-            print(f"✅ Blogger Güncellendi: {saat_str}")
-        else:
-            js_stil = "<script>function tabloDegistir(sel) { var x = document.getElementsByClassName('altin-tab-icerik'); for (var i = 0; i < x.length; i++) { x[i].style.display = 'none'; } document.getElementById(sel.value).style.display = 'block'; } window.onload = function() { var s = document.getElementById('saat-select'); if(s) { s.selectedIndex = s.options.length - 1; tabloDegistir(s); } };</script>"
-            ana_icerik = js_stil + f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 12px 15px; background: #f4f4f4; border: 1px solid #D4AF37; gap: 10px;"><label>🕒 Saat Seçin:</label><select id="saat-select" onchange="tabloDegistir(this)"><option value="tab-{saat_id}">{saat_str}</option></select></div>'
-            ana_icerik += yeni_tablo_html.replace('display:none;', 'display:block;') + arsiv_notu
-            gecici = service.posts().insert(blogId=blog_id, body={'title': simdi.strftime("%d-%m-%Y"), 'content': ana_icerik, 'labels': ['Altın Fiyatları']}).execute()
-            service.posts().update(blogId=blog_id, postId=gecici['id'], body={'title': gercek_baslik, 'content': ana_icerik, 'labels': ['Altın Fiyatları']}).execute()
-            print(f"🌟 Yeni Blogger Yazısı: {gercek_baslik}")
-
-        # 7. Instagram
-        insta_mesaj = instagram_metni_olustur(fiyatlar, isimlendirme, gercek_baslik, kur_alis, kur_satis)
-        instagram_paylas(insta_mesaj)
+        # 3. Instagram Paylaşımı
+        mesaj = instagram_metni_olustur(fiyatlar, isimlendirme, baslik, kur_alis, kur_satis)
+        instagram_paylas(mesaj)
 
     except Exception as e:
-        print(f"❌ KRİTİK SİSTEM HATASI: {str(e)}")
+        print(f"❌ HATA: {e}")
 
 if __name__ == "__main__":
     run_bot()
