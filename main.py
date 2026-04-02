@@ -8,45 +8,31 @@ import datetime
 from PIL import Image, ImageDraw, ImageFont
 from instagrapi import Client
 
-# --- YAPILANDIRMA (GitHub Secrets üzerinden gelir) ---
+# --- YAPILANDIRMA ---
 INSTA_USER = os.getenv("INSTA_USER")
 INSTA_PASS = os.getenv("INSTA_PASS")
 API_URL = "https://ayarlar.bingolder.com/sarrafiye"
-# Blogger üzerindeki şablon görselinizin tam URL'si
 IMG_URL = "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgcggkTkb6pDpnXjCcgKCqh9qRXA-g9NY0gpI4cvjgKF3YMuEjU6DB6EUKEaCx8QYZZHMZP80mbL4HvQWxumtsaG9EL_q4g8AlB9S-rjFvpPf6nxm5Z0EIMKtRMSh2C7lD4jIzx9xWhjmRgple455pw7ozEIlQLDwPbp_6bbwhxEFPtqDN-GGHrzXHcFATe/s1408/30622.png"
 
 def get_gold_data():
-    """API'den güncel fiyat verilerini çeker."""
     try:
-        response = requests.get(API_URL, timeout=10)
-        if response.status_code == 200:
-            return response.json()
-        print(f"API Hatası: Durum Kodu {response.status_code}")
-        return None
+        response = requests.get(API_URL, timeout=15)
+        return response.json() if response.status_code == 200 else None
     except Exception as e:
-        print(f"Veri çekme sırasında hata: {e}")
+        print(f"Veri çekme hatası: {e}")
         return None
 
 def create_price_image(data):
-    """Blogger görselini indirir, üzerine fiyatları yazar ve kaydeder."""
     try:
-        # Görseli internetten indir
-        img_res = requests.get(IMG_URL, timeout=15)
-        img_res.raise_for_status()
-        
-        # Bellekte görseli aç
-        img = Image.open(io.BytesIO(img_res.content))
+        response = requests.get(IMG_URL, timeout=20)
+        img = Image.open(io.BytesIO(response.content))
         draw = ImageDraw.Draw(img)
         
-        # Font Ayarı (GitHub Ubuntu sunucularındaki standart yol)
         try:
             font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 35)
         except:
-            print("Özel font bulunamadı, varsayılan kullanılıyor.")
             font = ImageFont.load_default()
 
-        # Koordinat Haritası (Alış X, Satış X, Satır Y)
-        # Bu değerleri şablonun kutucuklarına göre ince ayar yapabilirsiniz
         coords = {
             "gram24": (365, 520, 155),
             "ceyrek": (365, 520, 260),
@@ -57,64 +43,50 @@ def create_price_image(data):
             "ons":    (365, 520, 800)
         }
 
-        # Verileri yazdır
         for key, pos in coords.items():
             alis = str(data.get(f"{key}_alis", "0"))
             satis = str(data.get(f"{key}_satis", "0"))
-            # Alış fiyatı
             draw.text((pos[0], pos[2]), alis, font=font, fill=(60, 60, 60))
-            # Satış fiyatı
             draw.text((pos[1], pos[2]), satis, font=font, fill=(60, 60, 60))
 
-        # Tarih damgası ekle (Opsiyonel)
-        tarih_metni = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
-        draw.text((800, 930), tarih_metni, font=font, fill=(100, 100, 100))
+        tarih = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
+        draw.text((800, 930), tarih, font=font, fill=(100, 100, 100))
 
-        # Çıktıyı kaydet
         img.save("paylasim.jpg")
-        print("Görsel (paylasim.jpg) başarıyla oluşturuldu.")
         return True
     except Exception as e:
         print(f"Görsel oluşturma hatası: {e}")
         return False
 
 def upload_to_instagram():
-    """Instagram'a giriş yapar ve görseli paylaşır."""
+    cl = Client()
+    
+    # IP Engelini Aşmak İçin Farklı Bir Cihaz Kimliği (iPhone 13)
+    cl.set_user_agent("Instagram 219.0.0.12.117 (iPhone13,4; iOS 15_0_2; en_US; en-US; scale=3.00; 1170x2532; 329153541)")
+
     try:
-        cl = Client()
-        # Şüpheli giriş uyarısını azaltmak için Samsung S10 simülasyonu
-        cl.set_user_agent("Instagram 219.0.0.12.117 Android (29/10; 480dpi; 1080x2220; Samsung; SM-G973F; exynos9820; en_US; 340573356)")
-        
-        print("Instagram'a giriş yapılıyor...")
-        # İnsan davranışını taklit etmek için rastgele bekleme
-        time.sleep(random.randint(5, 12))
+        print("Instagram'a giriş denemesi yapılıyor...")
+        # Rastgele uzun bekleme (IP engeli için kritik)
+        time.sleep(random.randint(15, 30))
         
         cl.login(INSTA_USER, INSTA_PASS)
         
-        # Paylaşım açıklaması
-        caption = (
-            f"Bingöl Güncel Altın Fiyatları 🏷️\n"
-            f"Tarih: {datetime.datetime.now().strftime('%d.%m.%Y')}\n\n"
-            f"Anlık fiyat takibi için: bingolder.com\n\n"
-            f"#bingöl #altın #fiyatları #çeyrekaltın #kuyumcu #bingölkuyumcular"
-        )
+        time.sleep(random.randint(5, 10)) # Giriş sonrası bekle
         
-        # Fotoğrafı yükle
+        caption = f"Bingöl Güncel Altın Fiyatları ({datetime.datetime.now().strftime('%d.%m.%Y')}) #bingöl #altın #kuyumcu"
         cl.photo_upload("paylasim.jpg", caption)
-        print("Instagram paylaşımı BAŞARILI!")
+        print("BAŞARILI: Görsel paylaşıldı.")
         
     except Exception as e:
-        print(f"Instagram Hatası: {e}")
-        print("Lütfen telefonunuzdan 'Giriş Yapan Bendim' onayını kontrol edin.")
+        error_msg = str(e)
+        if "challenge_required" in error_msg:
+            print("HATA: Instagram doğrulama kodu istiyor. E-postanızı kontrol edin ve onaylayın.")
+        elif "feedback_required" in error_msg:
+            print("HATA: IP adresi engellendi. Lütfen 24 saat bekleyin veya manuel onay verin.")
+        else:
+            print(f"Instagram Hatası: {error_msg}")
 
 if __name__ == "__main__":
-    # 1. Veriyi çek
     fiyatlar = get_gold_data()
-    
-    if fiyatlar:
-        # 2. Görseli hazırla
-        if create_price_image(fiyatlar):
-            # 3. Instagram'da paylaş
-            upload_to_instagram()
-    else:
-        print("API'den veri alınamadığı için işlem durduruldu.")
+    if fiyatlar and create_price_image(fiyatlar):
+        upload_to_instagram()
