@@ -16,7 +16,8 @@ jobs:
       - name: Python Kur
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.10' # 3.9 olan yeri 3.10 yapın
+
 
       - name: Kütüphaneleri Kur
         run: pip install -r requirements.txt
