@@ -1,1 +1,28 @@
 
+name: Instagram Altın Botu
+
+on:
+  schedule:
+    - cron: '0 7,11,15 * * *' # UTC saatidir (TSİ +3 ekleyin)
+  workflow_dispatch: # Manuel çalıştırmak isterseniz
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Depoyu Çek
+        uses: actions/checkout@v3
+
+      - name: Python Kur
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Kütüphaneleri Kur
+        run: pip install -r requirements.txt
+
+      - name: Botu Çalıştır
+        env:
+          INSTA_USER: ${{ secrets.INSTA_USER }}
+          INSTA_PASS: ${{ secrets.INSTA_PASS }}
+        run: python main.py
