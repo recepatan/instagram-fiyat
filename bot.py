@@ -14,7 +14,7 @@ def get_gold_data():
     return response.json() if response.status_code == 200 else None
 
 def create_price_image(data):
-    img = Image.open("sablon.jpg")
+    img = Image.open("https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgcggkTkb6pDpnXjCcgKCqh9qRXA-g9NY0gpI4cvjgKF3YMuEjU6DB6EUKEaCx8QYZZHMZP80mbL4HvQWxumtsaG9EL_q4g8AlB9S-rjFvpPf6nxm5Z0EIMKtRMSh2C7lD4jIzx9xWhjmRgple455pw7ozEIlQLDwPbp_6bbwhxEFPtqDN-GGHrzXHcFATe/s1408/30622.png")
     draw = ImageDraw.Draw(img)
     
     # Not: GitHub Actions üzerinde standart fontlar kısıtlıdır. 
